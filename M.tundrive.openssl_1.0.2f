@@ -1,0 +1,63 @@
+# M.linux
+# $Name$ $Id$
+#	SCCS ID: %W% %G%
+##########################################################################
+# The compilation stuff
+##########################################################################
+INCS=-I. -I../e2common -I../e2net -I/opt/openssl/include -I../ssl_stuff/brotli-master/dec
+COMMON_CFLAGS=-DPOSIX -g2 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -DTHREADED_MALLOC -DUSE_E2_CODE -DE2_THREAD_SAFE -DUNIX
+# ************************************************************************
+# When compiling tundrive
+TUN_CFLAGS=$(COMMON_CFLAGS) -DTUNDRIVE -DUSE_SSL
+CFLAGS=$(TUN_CFLAGS)
+# ************************************************************************
+# When compiling racdrive
+.SUFFIXES: .c .o .y .s
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.c.s:
+	$(CC) $(CFLAGS) -S $<
+.y.c:
+	bison -d $<
+	mv $*.tab.c $@
+	mv $*.tab.h cscalc.h
+.y.o:
+	bison -d $<
+	mv $*.tab.c $*.c
+	mv $*.tab.h cscalc.h
+	$(CC) $(CFLAGS) -c $*.c
+# ************************************************************************
+CC= gcc
+RC = 
+VCC= gcc
+XPGCC= gcc
+COMMON_LIBS=../e2common/comlib.a ../ssl_stuff/brotli-master/dec/brotlidec.a -lpthread -lssl -lcrypto -lz -lm -lc -ldl
+TUNDRIVE_LIBS=-L/opt/openssl/lib $(COMMON_LIBS)
+#
+# Usual suspects
+#
+RANLIB = ranlib
+AR = ar
+LD= gcc
+#YACC=byacc
+YACC=bison
+LEX=flex -l
+LIBS=$(TUNDRIVE_LIBS)
+TARGET=tundrive
+#CFLAGS=$(TDS_CFLAGS)
+#LIBS=$(TDS_LIBS)
+#TARGET=tdsdrive
+##########################################################################
+# The executables that are built
+##########################################################################
+# Makefile for multi-threaded drivers 
+all: tundrive
+	@echo All done
+clean:
+	rm -f *.o
+tundrive: tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o tunlib.o sublib.o httpread.o csexe.o cspars.o ntlm.o sslserv.o webserv.o dhcbsupp.o
+	$(CC) $(CFLAGS) -o tundrive tmain.o t3oraserv.o sockserv.o tunlib.o sslserv.o webserv.o ntlm.o sublib.o threadserv.o httpread.o csexe.o dhcbsupp.o cspars.o /home/e2soft/e2net/e2net.o /home/e2soft/e2common/comlib.a $(LIBS)
+ntlm: ntlm.c
+	$(CC) $(CFLAGS) -o ntlm -DDEBUG -DSTANDALONE ntlm.c $(LIBS)
+threadserv.o:threadserv.c
+	$(CC) $(CFLAGS) -c threadserv.c

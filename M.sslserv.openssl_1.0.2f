@@ -1,0 +1,67 @@
+# M.linux
+# $Name$ $Id$
+#	SCCS ID: %W% %G%
+##########################################################################
+# The compilation stuff
+##########################################################################
+INCS=-I. -I../e2common -I../e2net -I/opt/openssl/include -I../ssl_stuff/brotli-master/dec
+COMMON_CFLAGS=-DPOSIX -g2 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -DTHREADED_MALLOC -DUSE_E2_CODE -DE2_THREAD_SAFE
+# ************************************************************************
+# When compiling sslserv
+SSLSERV_CFLAGS=$(COMMON_CFLAGS) -DWANT_EXCEPTION -DUSE_SSL -DSSLSERV -DUNIX
+.SUFFIXES: .c .o .y .s
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.c.s:
+	$(CC) $(CFLAGS) -S $<
+.y.c:
+	bison -d $<
+	mv $*.tab.c $@
+	mv $*.tab.h cscalc.h
+.y.o:
+	bison -d $<
+	mv $*.tab.c $*.c
+	mv $*.tab.h cscalc.h
+	$(CC) $(CFLAGS) -c $*.c
+CC= gcc
+RC = 
+VCC= gcc
+XPGCC= gcc
+COMMON_LIBS=../e2common/comlib.a ../ssl_stuff/brotli-master/dec/brotlidec.a -lpthread -lssl -lcrypto -lz -lm -lc -ldl
+SSLSERV_LIBS=-L/opt/openssl/lib $(COMMON_LIBS)
+#
+# Usual suspects
+#
+RANLIB = ranlib
+AR = ar
+LD= gcc
+#YACC=byacc
+YACC=bison
+LEX=flex -l
+#
+# Set CFLAGS and LIBS to whatever we are doing
+#
+CFLAGS=$(SSLSERV_CFLAGS)
+LIBS=$(SSLSERV_LIBS)
+TARGET=sslserv pwdserv
+##########################################################################
+# The executables that are built
+##########################################################################
+# Makefile for multi-threaded drivers 
+all: $(TARGET)
+	@echo All done
+clean:
+	rm -f *.o
+sslserv: tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o misclib.o sublib.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o sslserv.o webserv.o dhcbsupp.o asyncsr.o multiplex.o http2.o hpack.o 
+	$(CC) $(CFLAGS) -o sslserv tmain.o t3oraserv.o sockserv.o misclib.o sublib.o threadserv.o timestamp.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o dhcbsupp.o asyncsr.o multiplex.o http2.o hpack.o ../e2net/scripttree.o sslserv.o webserv.o ../e2net/e2net.o  ../e2common/comlib.a $(LIBS)
+threadserv.o:threadserv.c
+	$(CC) $(CFLAGS) -c threadserv.c
+cspars.o: cspars.c
+	$(CC) $(CFLAGS) -c cspars.c
+#	$(CC) $(CFLAGS) -DDEBUG -DYYDEBUG -c cspars.c
+csexe.o: csexe.c
+	$(CC) $(CFLAGS) -c csexe.c
+#	$(CC) $(CFLAGS) -DDEBUG -DDEBUG_E2_MALLOC -c csexe.c
+pwdserv: pwdserv.c
+	$(CC) $(CFLAGS) -DFRIG -o pwdserv pwdserv.c
+#	$(CC) $(CFLAGS) -DFRIG -o pwdserv pwdserv.c -lpam

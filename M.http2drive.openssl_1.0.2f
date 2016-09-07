@@ -1,0 +1,87 @@
+# M.linux
+# $Name$ $Id$
+#	SCCS ID: %W% %G%
+##########################################################################
+# The compilation stuff
+##########################################################################
+INCS=-I. -I../e2common -I../e2net -I/opt/openssl/include -I../ssl_stuff/brotli-master/dec
+COMMON_CFLAGS=-DPOSIX -g2 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -DTHREADED_MALLOC -DUSE_E2_CODE -DE2_THREAD_SAFE
+#COMMON_CFLAGS=-DPOSIX -O4 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -DTHREADED_MALLOC
+# ************************************************************************
+# When compiling http2drive
+HTTP2_CFLAGS=$(COMMON_CFLAGS) -DWANT_EXCEPTION -DUSE_SSL -DTRY_SESS_REUSE
+# ************************************************************************
+# When compiling racdrive
+RAC_CFLAGS=$(HTTP2_CFLAGS) -DORA9IAS_2 -DE2 -DNOT_LLOYDSTSB 
+.SUFFIXES: .c .o .y .s
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.c.s:
+	$(CC) $(CFLAGS) -S $<
+.y.c:
+	bison -d $<
+	mv $*.tab.c $@
+	mv $*.tab.h cscalc.h
+.y.o:
+	bison -d $<
+	mv $*.tab.c $*.c
+	mv $*.tab.h cscalc.h
+	$(CC) $(CFLAGS) -c $*.c
+# ************************************************************************
+# When compiling dotnetdrive
+DOTNET_CFLAGS=$(COMMON_CFLAGS) -DDOTNET
+TDS_CFLAGS=$(COMMON_CFLAGS) -DTDSDRIVE
+CC= gcc
+RC = 
+VCC= gcc
+XPGCC= gcc
+COMMON_LIBS=../e2common/comlib.a ../ssl_stuff/brotli-master/dec/brotlidec.a -lpthread -lssl -lcrypto -lz -lm -lc -ldl
+HTTP2_LIBS=-L/opt/openssl/lib $(COMMON_LIBS)
+RAC_LIBS=$(HTTP2_LIBS)
+TDS_LIBS=-ltds -liconv $(COMMON_LIBS)
+DOTNET_LIBS=-lmcrypt $(COMMON_LIBS)
+#
+# Usual suspects
+#
+RANLIB = ranlib
+AR = ar
+LD= gcc
+#YACC=byacc
+YACC=bison
+LEX=flex -l
+#
+# Set CFLAGS and LIBS to whatever we are doing
+#
+CFLAGS=$(HTTP2_CFLAGS)
+LIBS=$(HTTP2_LIBS)
+TARGET=http2drive ungz
+#CFLAGS=$(RAC_CFLAGS)
+#LIBS=$(RAC_LIBS)
+#TARGET=racdrive jsonify ungz
+#CFLAGS=$(DOTNET_CFLAGS)
+#LIBS=$(DOTNET_LIBS)
+#TARGET=dotnetdrive dec_aes find_logon_block autoscript
+#CFLAGS=$(TDS_CFLAGS)
+#LIBS=$(TDS_LIBS)
+#TARGET=tdsdrive
+##########################################################################
+# The executables that are built
+##########################################################################
+# Makefile for multi-threaded drivers 
+all: $(TARGET)
+	@echo All done
+clean:
+	rm -f *.o
+http2drive: tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o misclib.o sublib.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o dhcbsupp.o asyncsr.o multiplex.o http2.o hpack.o ../e2net/scripttree.o
+	$(CC) $(CFLAGS) -o http2drive tmain.o t3oraserv.o sockserv.o misclib.o sublib.o threadserv.o timestamp.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o dhcbsupp.o asyncsr.o multiplex.o http2.o hpack.o ../e2net/scripttree.o ../e2net/e2net.o  ../e2common/comlib.a $(LIBS)
+#	$(CC) $(CFLAGS) -o http2drive tmain.o t3oraserv.o sockserv.o misclib.o sublib.o threadserv.o timestamp.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o ../e2net/e2net.o  ../e2common/comlib.a ../e2common/malloc.o $(LIBS)
+threadserv.o:threadserv.c
+	$(CC) $(CFLAGS) -c threadserv.c
+cspars.o: cspars.c
+	$(CC) $(CFLAGS) -c cspars.c
+#	$(CC) $(CFLAGS) -DDEBUG -DYYDEBUG -c cspars.c
+csexe.o: csexe.c
+	$(CC) $(CFLAGS) -c csexe.c
+#	$(CC) $(CFLAGS) -DDEBUG -DDEBUG_E2_MALLOC -c csexe.c
+ungz: ungz.c jsonscript.o parsesup.o webgettok.o oraforms.o fencdec.o ../e2net/scripttree.o ../e2net/e2net.o
+	$(CC) $(CFLAGS) -o ungz ungz.c jsonscript.o oraforms.o fencdec.o parsesup.o webgettok.o ../e2net/scripttree.o ../e2net/e2net.o $(LIBS)

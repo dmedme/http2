@@ -1,0 +1,5 @@
+PROXY_DOMAIN=emr
+PROXY_USER=netperf
+PROXY_PASSWORD=N3tp3rf!0
+USER=hacktest
+PASSWORD=B4dguy5s!0

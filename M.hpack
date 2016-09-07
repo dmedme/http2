@@ -1,0 +1,3 @@
+CFLAGS=-DNOBPF_H -DNOTCP_H -DNOETHER_H -DPOSIX -DLINUX -DAIX4 -I. -I../e2net -I../e2common -g
+all: hpack.c
+	gcc $(CFLAGS) -DSTANDALONE -o hpack hpack.c ../e2net/e2net.o ../e2common/comlib.a -lm -lpthread >fred.log 2>&1

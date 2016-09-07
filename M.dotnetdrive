@@ -1,0 +1,98 @@
+# M.linux
+# $Name$ $Id$
+#	SCCS ID: %W% %G%
+##########################################################################
+# The compilation stuff
+##########################################################################
+INCS=-I. -I../e2common -I../e2net 
+COMMON_CFLAGS=-DPOSIX -g2 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H
+#COMMON_CFLAGS=-DPOSIX -O4 -DLINUX $(INCS) -DAT -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H
+# ************************************************************************
+# Remove USE_SSL unless SSL is required ...
+# ************************************************************************
+# When compiling t3drive
+#T3_CFLAGS=$(COMMON_CFLAGS) -DWANT_EXCEPTION -DUSE_SSL
+# ************************************************************************
+# When compiling racdrive
+#RAC_CFLAGS=$(T3_CFLAGS) -DORA9IAS_2 -DE2 -DNOT_LLOYDSTSB 
+.SUFFIXES: .c .o .y .s
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.c.s:
+	$(CC) $(CFLAGS) -S $<
+.y.c:
+	bison -d $<
+	mv $*.tab.c $@
+	mv $*.tab.h cscalc.h
+.y.o:
+	bison -d $<
+	mv $*.tab.c $*.c
+	mv $*.tab.h cscalc.h
+	$(CC) $(CFLAGS) -c $*.c
+# ************************************************************************
+# When compiling dotnetdrive
+DOTNET_CFLAGS=$(COMMON_CFLAGS) -DDOTNET -DUSE_SSL
+TDS_CFLAGS=$(COMMON_CFLAGS) -DTDSDRIVE
+CC= gcc
+RC = 
+VCC= gcc
+XPGCC= gcc
+COMMON_LIBS=../e2common/comlib.a -lpthread -lssl -lz -lm -lc
+T3_LIBS=$(COMMON_LIBS)
+RAC_LIBS=$(T3_LIBS)
+TDS_LIBS=-ltds -liconv $(COMMON_LIBS)
+DOTNET_LIBS=-lmcrypt $(COMMON_LIBS)
+#
+# Usual suspects
+#
+RANLIB = ranlib
+AR = ar
+LD= gcc
+#YACC=byacc
+YACC=bison
+LEX=flex -l
+#
+# Set CFLAGS and LIBS to whatever we are doing
+#
+#CFLAGS=$(T3_CFLAGS)
+#LIBS=$(T3_LIBS)
+#TARGET=t3drive jsonify ungz autoscript
+#CFLAGS=$(RAC_CFLAGS)
+#LIBS=$(RAC_LIBS)
+#TARGET=racdrive jsonify ungz
+CFLAGS=$(DOTNET_CFLAGS)
+LIBS=$(DOTNET_LIBS)
+TARGET=dotnetdrive dec_aes find_logon_block autoscript
+#CFLAGS=$(TDS_CFLAGS)
+#LIBS=$(TDS_LIBS)
+#TARGET=tdsdrive
+##########################################################################
+# The executables that are built
+##########################################################################
+# Makefile for multi-threaded drivers 
+all: $(TARGET)
+	@echo All done
+clean:
+	rm -f *.o
+racdrive: tmain.o t3oraserv.o sockserv.o threadserv.o fencdec.o timestamp.o misclib.o sublib.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o
+	$(CC) $(CFLAGS) -o racdrive tmain.o t3oraserv.o sockserv.o misclib.o sublib.o fencdec.o threadserv.o httpread.o timestamp.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/e2net.o ../e2net/httpextlib.o ../e2net/scripttree.o $(LIBS)
+t3drive: tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o misclib.o sublib.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o
+	$(CC) $(CFLAGS) -o t3drive tmain.o t3oraserv.o sockserv.o misclib.o sublib.o threadserv.o timestamp.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o ../e2net/e2net.o  ../e2common/comlib.a $(LIBS)
+dotnetdrive: tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o dotnetlib.o sublib.o enc_aes_dec_rsa.o csexe.o cspars.o webgettok.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o
+	$(CC) $(CFLAGS) -o dotnetdrive tmain.o t3oraserv.o sockserv.o dotnetlib.o sublib.o threadserv.o timestamp.o csexe.o cspars.o webgettok.o parsesup.o ../e2net/scripttree.o scriptserv.o netscriptserv.o ../e2net/e2net.o enc_aes_dec_rsa.o sdebug.o ../e2common/comlib.a $(LIBS)
+tdsdrive: tmain.o tdsserv.o threadserv.o timestamp.o tsqlhack.o csexe.o cspars.o
+	$(CC) $(CFLAGS) -o tdsdrive tmain.o tdsserv.o tsqlhack.o threadserv.o timestamp.o csexe.o cspars.o ../e2net/e2net.o $(LIBS)
+jsonify: tmain.o rendscript.o threadserv.o timestamp.o sublib.o webgettok.o parsesup.o csexe.o scriptserv.o netscriptserv.o ../e2net/scripttree.o ../e2net/e2net.o
+	$(CC) $(CFLAGS) -o jsonify tmain.o rendscript.o misclib.o sublib.o threadserv.o timestamp.o webgettok.o parsesup.o csexe.o scriptserv.o netscriptserv.o ../e2net/scripttree.o ../e2net/e2net.o $(LIBS)
+ungz: ungz.c parsesup.o webgettok.o csexe.o sublib.o ../e2net/scripttree.o ../e2net/e2net.o
+	$(CC) $(CFLAGS) -o ungz ungz.c parsesup.o csexe.o sublib.o webgettok.o ../e2net/scripttree.o ../e2net/e2net.o $(LIBS)
+autoscript: autoscript.c parsesup.o webgettok.o sublib.o csexe.o ../e2net/scripttree.o ../e2net/e2net.o
+	$(CC) $(CFLAGS) -o autoscript autoscript.c sublib.o parsesup.o csexe.o webgettok.o ../e2net/scripttree.o ../e2net/e2net.o $(LIBS)
+ntlm: ntlm.c
+	$(CC) $(CFLAGS) -o ntlm -DDEBUG -DSTANDALONE ntlm.c $(LIBS)
+threadserv.o:threadserv.c
+	$(CC) $(CFLAGS) -c threadserv.c
+find_logon_block: enc_aes_dec_rsa.c
+	$(CC) $(CFLAGS) -DSTANDALONE -o find_logon_block enc_aes_dec_rsa.c $(LIBS)
+dec_aes: dec_aes.c
+	$(CC) $(CFLAGS) -o dec_aes dec_aes.c $(LIBS)

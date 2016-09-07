@@ -1,0 +1,87 @@
+# M.linux
+# $Name$ $Id$
+#	SCCS ID: %W% %G%
+##########################################################################
+# The compilation stuff
+##########################################################################
+INCS=-I. -I../e2common -I../e2net 
+#COMMON_CFLAGS=-DDIFF_TIME -DPOSIX -g2 $(INCS) -DAT -DNT4 -DMINGW32 -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -D_WIN32 -DWIN32 -DNOIP_H -DNOIP_ICMP_H -DSSLSERV
+COMMON_CFLAGS=-DDIFF_TIME -DPOSIX -O4 $(INCS) -DAT -DNT4 -DMINGW32 -DPATH_AT -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DNOBPF_H -DNOTCP_H -DNOETHER_H -D_WIN32 -DWIN32 -DNOIP_H -DNOIP_ICMP_H -DSSLSERV -s
+# ************************************************************************
+# Remove USE_SSL unless SSL is required ...
+# ************************************************************************
+# When compiling t3drive
+T3_CFLAGS=$(COMMON_CFLAGS) -DWANT_EXCEPTION -Ic:/mingw/zlib123-dll/include -DUSE_SSL
+# ************************************************************************
+# When compiling racdrive
+RAC_CFLAGS=$(T3_CFLAGS) -DORA9IAS_2 -DE2 -DNOT_LLOYDSTSB
+.SUFFIXES: .c .o .y
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+.y.c:
+	bison -d $<
+	mv $*.tab.c $@
+	mv $*.tab.h cscalc.h
+.y.o:
+	bison -d $<
+	mv $*.tab.c $*.c
+	mv $*.tab.h cscalc.h
+	$(CC) $(CFLAGS) -c $*.c
+# ************************************************************************
+# When compiling dotnetdrive
+DOTNET_CFLAGS=$(COMMON_CFLAGS) -DDOTNET -Ic:/mingw/libmcrypt-2.5.8/include
+TDS_CFLAGS=$(COMMON_CFLAGS) -DTDSDRIVE -Ic:/mingw/freetds-0.82/include
+CC= c:/mingw/bin/gcc
+RC = c:/lcc/bin/lrc
+VCC= c:/mingw/bin/gcc
+XPGCC= c:/mingw/bin/gcc
+# if USE_SSL is true, we need to include the OpenSSL applink
+COMMON_LIBS=applink.o ../e2common/comlib.a -Lc:/mingw/lib -Lc:/mingw/openssl-1.0.0-beta2 -lssl -lcrypto -lmingw32 -lws2_32 -ladvapi32 -lgdi32 -luser32 -lshell32 -lkernel32 -lmsvcrt -lntdll
+#COMMON_LIBS=applink.o ../e2common/comlib.a -Lc:/mingw/lib -Lc:/mingw/openssl-1.0.0-beta2 -lssl -lcrypto -lmingw32 -lws2_32 -ladvapi32 -lgdi32 -luser32 -lshell32 -lkernel32 -lmsvcrt -lntdll
+T3_LIBS=c:/mingw/zlib123-dll/lib/libz.a $(COMMON_LIBS)
+RAC_LIBS=$(T3_LIBS)
+TDS_LIBS=c:/mingw/freetds-0.82/src/tds/.libs/libtds.a c:/mingw/freetds-0.82/src/replacements/.libs/libreplacements.a -liconv $(COMMON_LIBS)
+DOTNET_LIBS=c:/mingw/libmcrypt-2.5.8/lib/.libs/libmcrypt.dll.a $(COMMON_LIBS)
+#
+# Usual suspects
+#
+RANLIB = c:/mingw/bin/ranlib
+AR = c:/mingw/bin/ar
+LD= c:/mingw/bin/gcc
+YACC=bison
+LEX=flex -l
+#
+# Set CFLAGS and LIBS to whatever we are doing
+#
+CFLAGS=$(T3_CFLAGS)
+LIBS=$(T3_LIBS)
+TARGET=sslserv pwdserv
+#CFLAGS=$(RAC_CFLAGS)
+#LIBS=$(RAC_LIBS)
+#TARGET=racdrive
+#CFLAGS=$(DOTNET_CFLAGS)
+#LIBS=$(DOTNET_LIBS)
+#TARGET=dotnetdrive
+#CFLAGS=$(TDS_CFLAGS)
+#LIBS=$(TDS_LIBS)
+#TARGET=tdsdrive
+##########################################################################
+# The executables that are built
+##########################################################################
+# Makefile for multi-threaded drivers 
+all: $(TARGET)
+	@echo All done
+clean:
+	rm -f *.o
+sslserv: applink.o w32pthread.o tmain.o t3oraserv.o sockserv.o threadserv.o timestamp.o misclib.o sublib.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o ../e2net/scripttree.o sslserv.o webserv.o dhcbsupp.o
+	$(CC) $(CFLAGS) -o sslserv tmain.o t3oraserv.o sockserv.o misclib.o sublib.o threadserv.o w32pthread.o timestamp.o httpread.o csexe.o cspars.o webgettok.o ntlm.o sdebug.o parsesup.o scriptserv.o netscriptserv.o dhcbsupp.o ../e2net/scripttree.o sslserv.o webserv.o ../e2net/e2net.o  ../e2common/comlib.a $(LIBS)
+threadserv.o:threadserv.c
+	$(CC) $(CFLAGS) -c threadserv.c
+cspars.o: cspars.c
+	$(CC) $(CFLAGS) -c cspars.c
+#	$(CC) $(CFLAGS) -DDEBUG -DYYDEBUG -c cspars.c
+csexe.o: csexe.c
+	$(CC) $(CFLAGS) -c csexe.c
+#	$(CC) $(CFLAGS) -DDEBUG -DDEBUG_E2_MALLOC -c csexe.c
+pwdserv: pwdserv.c
+	$(CC) $(CFLAGS) -o pwdserv pwdserv.c
